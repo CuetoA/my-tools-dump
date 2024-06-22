@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Comparison Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Row 1: Title -->
+        <div class="row title">
+            <h1>Text Comparison Tool</h1>
+        </div>
+
+        <!-- Row 2: Text Input Areas -->
+        <div class="row text-comparison">
+            <div class="column">
+                <h2>Reference Text</h2>
+                <div class="text-container" id="referenceTextContainer">
+                    <textarea id="referenceText" rows="10"></textarea>
+                </div>
+            </div>
+            <div class="column">
+                <h2>Text to Compare</h2>
+                <div class="text-container" id="compareTextContainer">
+                    <textarea id="compareText" rows="10"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Compare Button -->
+        <div class="row button-row">
+            <button id="compareButton">Compare</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
