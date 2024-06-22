@@ -4,7 +4,7 @@ function preprocessText(text) {
     // Remove leading and trailing spaces
     text = text.trim();
     // Replace punctuation with spaces
-    text = text.replace(/[?.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ");
+    text = text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ");
     // Convert to lowercase
     text = text.toLowerCase();
     // Replace multiple spaces with a single space
@@ -37,6 +37,6 @@ function compareTexts() {
         }
     }
 
-    document.getElementById('referenceText').parentElement.innerHTML = referenceHTML;
-    document.getElementById('compareText').parentElement.innerHTML = compareHTML;
+    document.getElementById('referenceTextContainer').innerHTML = `<div class="text-result">${referenceHTML}</div>`;
+    document.getElementById('compareTextContainer').innerHTML = `<div class="text-result">${compareHTML}</div>`;
 }
