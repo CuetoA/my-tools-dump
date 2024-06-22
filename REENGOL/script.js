@@ -1,8 +1,20 @@
 document.getElementById('compareButton').addEventListener('click', compareTexts);
 
+function preprocessText(text) {
+    // Remove leading and trailing spaces
+    text = text.trim();
+    // Replace punctuation with spaces
+    text = text.replace(/[?.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ");
+    // Convert to lowercase
+    text = text.toLowerCase();
+    // Replace multiple spaces with a single space
+    text = text.replace(/\s\s+/g, ' ');
+    return text;
+}
+
 function compareTexts() {
-    const referenceText = document.getElementById('referenceText').value.split(' ');
-    const compareText = document.getElementById('compareText').value.split(' ');
+    const referenceText = preprocessText(document.getElementById('referenceText').value).split(' ');
+    const compareText = preprocessText(document.getElementById('compareText').value).split(' ');
 
     let referenceHTML = '';
     let compareHTML = '';
