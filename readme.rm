@@ -1,1 +1,2 @@
-Folder to dump all personal non-relevant projects
+Folder to dump all personal non-relevant projects.
+- This is a multirepo, therefore dev is the release stage, but branches are created by project.
