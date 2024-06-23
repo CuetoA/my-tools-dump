@@ -23,11 +23,14 @@ function preprocessText(text) {
     // Remove leading and trailing spaces
     text = text.trim();
     // Replace punctuation with spaces
-    text = text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ");
+    text = text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, " ");
+    text = text.replace(/’/g, "'");
+    // Replace multiple spaces with a single space
+    text = text.replace(/\s+/g, ' ');
     // Convert to lowercase
     text = text.toLowerCase();
     // Replace multiple spaces with a single space
-    text = text.replace(/\s\s+/g, ' ');
+    // text = text.replace(/\s\s+/g, ' ');
     return text;
 }
 
@@ -74,10 +77,10 @@ async function compareTexts(referenceText, comparisonText) {
             'Authorization': `Bearer `
         },
         body: JSON.stringify({
-            "model": "gpt-3.5-turbo",
+            "model": "gpt-4o",
             "messages": [{ "role": "user", "content": prompt }],
             "max_tokens": 1000,
-            "temperature": 0.5
+            // "temperature": 0.5
         })
     });
     
