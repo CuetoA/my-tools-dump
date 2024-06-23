@@ -1,55 +1,22 @@
-async function loadApiKey() {
-    const response = await fetch('config.json');
-    const config = await response.json();
-
-    console.log('Im here inside loading apikey')
-
-    return config.apiKey;
-}
-
-
 document.getElementById('compareButton').addEventListener('click', async () => {
-    const apiKey = await loadApiKey(); 
-
     const refText = document.getElementById('referenceText').value;
     const compText = document.getElementById('compareText').value;
 
     const preprocessedRefText = preprocessText(refText);
     const preprocessedCompText = preprocessText(compText);
 
-    const windowSize = 14;
-    const tolerance = 3;
+    try {
+        const { differences, contextual_differences } = await compareTexts(preprocessedRefText, preprocessedCompText);
+        console.log('Differences:', differences);
+        console.log('Contextual Differences:', contextual_differences);
 
-    const refWindows = createWindows(preprocessedRefText, windowSize);
-    let highlightedRefText = '';
-    let highlightedCompText = '';
-    let lastCompIndex = 0;
+        const highlighted = highlightDifferences(refText, compText, differences, contextual_differences);
 
-    for (const refWindowObj of refWindows) {
-        const refWindow = refWindowObj.window;
-        const compWindowObj = findWindowInText(refWindow, preprocessedCompText.slice(lastCompIndex), tolerance);
-
-        if (compWindowObj) {
-            const refWords = refWindow.split(' ');
-            const compWords = preprocessedCompText.split(' ').slice(compWindowObj.startIndex, compWindowObj.endIndex).join(' ');
-
-            try {
-                const differences = await compareWindows(refWindow, compWords);
-                const highlighted = highlightDifferences(refWindow, compWords, differences);
-                highlightedRefText += highlighted.highlightedRefText + ' ';
-                highlightedCompText += highlighted.highlightedCompText + ' ';
-                lastCompIndex = compWindowObj.endIndex;
-            } catch (error) {
-                console.error('Error comparing windows:', error);
-            }
-        } else {
-            highlightedRefText += `<span style="background-color: orange;">${refWindow}</span> `;
-            highlightedCompText += `<span style="background-color: green;">${refWindow}</span> `;
-        }
+        document.getElementById('referenceTextContainer').innerHTML = `<div class="text-result">${highlighted.highlightedRefText}</div>`;
+        document.getElementById('compareTextContainer').innerHTML = `<div class="text-result">${highlighted.highlightedCompText}</div>`;
+    } catch (error) {
+        console.error('Error comparing texts:', error);
     }
-
-    document.getElementById('referenceTextContainer').innerHTML = `<div class="text-result">${highlightedRefText}</div>`;
-    document.getElementById('compareTextContainer').innerHTML = `<div class="text-result">${highlightedCompText}</div>`;
 });
 
 function preprocessText(text) {
@@ -64,64 +31,65 @@ function preprocessText(text) {
     return text;
 }
 
-function createWindows(text, windowSize) {
-    const words = text.split(' ');
-    const windows = [];
-    for (let i = 0; i <= words.length - windowSize; i += windowSize) {
-        const window = words.slice(i, i + windowSize).join(' ');
-        windows.push({ startIndex: i, window });
-    }
-    return windows;
-}
-
-function findWindowInText(window, compareText, tolerance) {
-    const words = compareText.split(' ');
-    const windowWords = window.split(' ');
-    const windowSize = windowWords.length;
-    const searchWindowSize = windowSize + 2 * tolerance;
-
-    for (let i = 0; i <= words.length - searchWindowSize; i++) {
-        const searchWindow = words.slice(i, i + searchWindowSize).join(' ');
-        if (searchWindow.includes(windowWords[0]) && searchWindow.includes(windowWords[windowWords.length - 1])) {
-            return { startIndex: i, endIndex: i + searchWindowSize };
-        }
-    }
-    return null;
-}
-
-async function compareWindows(referenceWindow, comparisonWindow) {
+async function compareTexts(referenceText, comparisonText) {
     const prompt = `
-        I will provide two texts: a reference text and a comparison text. Your task is to compare these texts and identify words that are different or missing in their respective positions. Output the differences as a dictionary in the following format:
-        {reference_word1: comparison_word1, reference_word2: comparison_word2, ...}
-        Only include words that are different or missing in their respective positions. Ensure the output is non-verbose and strictly follows the dictionary format.
-        
+        I will provide two texts: a reference text and a comparison text. Your task is to compare these texts and identify words that are different or missing in their respective positions. Output the differences as two dictionaries.
+
+        The first dictionary ("differences") should include only the words that are different or missing in their respective positions. 
+
+        The second dictionary ("contextual_differences") should include the different words along with two words before and two words after the differing word in both texts.
+
+        The format should be as follows:
+        {
+            "differences": {reference_word1: comparison_word1, reference_word2: comparison_word2, ...},
+            "contextual_differences": {reference_phrase1: comparison_phrase1, reference_phrase2: comparison_phrase2, ...}
+        }
+
+        Example:
         Reference text:
-        "${referenceWindow}"
-        
+        "This is my testing text, do you like it I’m not sure how good is it, but I think is improving a lot what about you The other day I ordered a taco and it was deliccious"
+
         Comparison text:
-        "${comparisonWindow}"
+        "This is my testing test do you like it I am not sure how wood is it, but I think is improving a lot what about you The other week I swallowed a taco and it was deliccious"
+
+        Output:
+        {
+            "differences": {"text": "test", "I’m": "I am", "good": "wood", "day": "week", "ordered": "swallowed"},
+            "contextual_differences": {"testing text do": "testing test do", "I’m not sure": "I am not sure", "how good is": "how wood is", "other day I": "other week I", "I ordered a": "I swallowed a"}
+        }
+
+        Only provide the "differences" and "contextual_differences" dictionaries in the output, without any additional text.
+
+        Reference text:
+        "${referenceText}"
+
+        Comparison text:
+        "${comparisonText}"
     `;
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
+            'Authorization': `Bearer `
         },
         body: JSON.stringify({
-            "model": 'gpt-3.5-turbo',
-            "messages": [{"role": 'user', "content": prompt}],
+            "model": "gpt-3.5-turbo",
+            "messages": [{ "role": "user", "content": prompt }],
             "max_tokens": 1000,
             "temperature": 0.5
         })
     });
     
     if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+        const errorDetails = await response.json();
+        console.error(`API request failed with status ${response.status}:`, errorDetails);
+        throw new Error(`API request failed with status ${response.status}: ${errorDetails.error.message}`);
     }
 
     const data = await response.json();
     const text = data.choices[0].message.content.trim();
+    
     try {
         return JSON.parse(text);
     } catch (error) {
@@ -129,16 +97,35 @@ async function compareWindows(referenceWindow, comparisonWindow) {
     }
 }
 
-function highlightDifferences(refText, compText, differences) {
+function highlightDifferences(refText, compText, differences, contextualDifferences) {
     const refWords = refText.split(' ');
     const compWords = compText.split(' ');
 
-    refWords.forEach((word, index) => {
-        if (differences[word]) {
-            refWords[index] = `<span style="background-color: orange;">${word}</span>`;
-            compWords[index] = `<span style="background-color: green;">${differences[word]}</span>`;
+    // Highlight differences in reference text
+    for (const [refWord, compWord] of Object.entries(differences)) {
+        const refPhrase = Object.keys(contextualDifferences).find(key => key.includes(refWord));
+        const compPhrase = contextualDifferences[refPhrase];
+
+        // Check if refPhrase and compPhrase are defined
+        if (!refPhrase || !compPhrase) {
+            console.error(`Phrase not found for word: ${refWord}`);
+            continue;
         }
-    });
+
+        const refPhraseWords = refPhrase.split(' ');
+        const compPhraseWords = compPhrase.split(' ');
+
+        const refIndex = refWords.findIndex((word, i) => refPhraseWords.every((phraseWord, j) => refWords[i + j] === phraseWord));
+        const compIndex = compWords.findIndex((word, i) => compPhraseWords.every((phraseWord, j) => compWords[i + j] === phraseWord));
+
+        if (refIndex !== -1) {
+            refWords[refIndex + refPhraseWords.indexOf(refWord)] = `<span style="background-color: orange;">${refWord}</span>`;
+        }
+
+        if (compIndex !== -1) {
+            compWords[compIndex + compPhraseWords.indexOf(compWord)] = `<span style="background-color: green;">${compWord}</span>`;
+        }
+    }
 
     return {
         highlightedRefText: refWords.join(' '),
